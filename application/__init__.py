@@ -23,19 +23,41 @@ def create_game():
         g = game.Game()
         g.start_new_game(player_one_id, player_two_id, x_marker)
 
-        return "Created new game with uuid: {}".format(g.id)
+        return "Created new game with uuid: {}".format(g.uuid)
 
 
-#curl -X POST "http://127.0.0.1:5000/create_game?p1id=1&p2id=2&x_marker=one"
-#&game_uuid=0c0badf9-d5ec-44e2-8bc9-e87cdd44a7b7
+#curl -X POST "http://127.0.0.1:5000/move?game_uuid=0ee0c8ab-19d9-4cb0-acbe-ad48b3a85fd7&player_id=1&space=A"
 @app.route("/move", methods=['GET', 'POST'])
+def move():
     if request.method =='POST':
         game_uuid = request.args.get('game_uuid')
+        player_id = int(request.args.get('player_id'))
+        space = request.args.get('space')
+
         game = db.session.query(models.Game).filter(models.Game.uuid == game_uuid).first()
         
-        if not game:
-            return 'Game either does not exist or is no longer active'
+        if not game or game.complete:
+            return '\n Game either does not exist or is no longer active \n'
 
-        g = game.Game(game_uuid) 
+        g = Game(game_uuid) 
+        marker = g.markers[player_id]        
+        g.make_move(space, marker)
         
-        g.make_move(g.p1, 'A')
+        board = models.Board()
+        board.player_id = player_id
+        board.game_uuid = game_uuid
+        board.space = space
+        db.session.add(board)
+        db.session.commit()
+        if g.game_status:
+            for k, v in g.markers.items():
+                if v == g.game_status:
+                    game.winner = player_id
+                    game.complete = True
+                    db.session.add(game)
+                    db.session.commit()
+                    return '\n The winner is: {}s, player id: {} \n'.format(g.game_status, k)
+        else:
+            return "\n Move registered; there is no current winner. \n"
+
+        

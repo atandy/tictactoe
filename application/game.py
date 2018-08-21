@@ -5,6 +5,12 @@ import os
 from application import db
 import sqlalchemy
 
+import logging
+logging.basicConfig(
+    filename='game.log', 
+    filemode='w', 
+    format='%(asctime)s:%(levelname)s:%(message)s', 
+    level=logging.DEBUG)
 
 class Player:
     def __init__(self, player_id, marker_type):
@@ -22,7 +28,7 @@ class Game:
     def __init__(self, game_uuid=None):
         if not game_uuid:
             self.uuid = self.generate_uuid()
-        elif game_uuid
+        elif game_uuid:
             self.uuid = game_uuid
             self.update()
         return
@@ -58,33 +64,49 @@ class Game:
         self.board = Board()
         return 
 
-    def make_move(self, player, board_position):
-        self.board.occupy_space(player, board_position)
+    def make_move(self, board_position, marker_type):
+        self.board.occupy_space(board_position, marker_type)
         return
 
     # reload game board given a game id 
     def update(self):
-        game = db.session.query(models.Game).filter(models.Game.uuid == game_uuid).first()
+        game = db.session.query(models.Game).filter(models.Game.uuid == self.uuid).first()
+        player_one = db.session.query(models.Player).filter(models.Player.id == game.player_one).first()
+        player_two = db.session.query(models.Player).filter(models.Player.id == game.player_two).first()
 
-        player_one = db.session.query(models.Player).filter(models.Player == game.player_one).first()
-        player_two = db.session.query(models.Player).filter(models.Player == game.player_two).first()
-        
         if game.x_marker == 'one':
-            player_one.marker_type = 'X'
-            player_two.marker_type = 'O'
+            self.markers = { 
+                player_one.id: 'X',
+                player_two.id: 'O'
+            }
         elif game.x_marker == 'two':
-            player_one.marker_type = 'O'
-            player_two.marker_type = 'X'
-
+            self.markers = {
+                player_one.id: 'O',
+                player_two.id: 'X'
+            }
+            
         self.p1 = player_one
         self.p2 = player_two
+
         self.players = [self.p1, self.p2]
-        db_board = db.session.query(models.Board).filter(models.Board.game_uuid==game_uuid).all()
-        for position in db_board:
+        self.board = Board()
+        db_board = db.session.query(models.Board).filter(models.Board.game_uuid==self.uuid).all()
+        for board_row in db_board:
             for player in self.players:
-                if player.id == position.player_id:
-                    self.board.onccupy_space(player, position.space)
-    
+                if player.id == board_row.player_id:
+                    logging.info("occupying space: {}".format(board_row.space))
+                    self.board.occupy_space(board_row.space, self.markers[player.id])
+
+            current_status = self.board.check_permutations()
+            self.game_status = current_status 
+            '''
+                self.game_status = 'incomplete'
+            else:
+                self.game_status = 'complete'
+                self.winner = current_status
+            '''     
+                        
+
 class Board:
     def __init__(self):
         self.id = None
@@ -105,11 +127,12 @@ class Board:
         db.session.add(board)
         db.session.commit()
 
-    def occupy_space(self, player, position):
+    def occupy_space(self, position, marker_type):
         # googled this 
-        setattr(self, position, player.marker_type)
+        setattr(self, position, marker_type)
     
     def check_permutations(self):
+        ''' Determines if the game has been won'''
         self.winning_groups = [
             [self.A, self.B, self.C],
             [self.A, self.D, self.G],
@@ -127,7 +150,7 @@ class Board:
                 else:
                     continue
             if len(set(group)) <= 1:
-                return 'The winner is: {}'.format(group[0])
+                return group[0]
 
         for wg in self.winning_groups:
             res = detect_winning_group(wg)
