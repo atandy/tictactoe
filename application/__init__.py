@@ -8,11 +8,14 @@ from application import db
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
 
-
+'''
 # HTTP Request Assumptions:
     # Client is POSTing.
     # Client will have player ids and other info to send to backend
     # Client will know the game_uuid (probably stored in session or on page)
+    # x_marker is a string, either "one" or "two", which refers 
+    to the player; this is not great design.
+'''
 
 #curl -X POST "http://127.0.0.1:5000/create_game?p1id=1&p2id=2&x_marker=one"
 @app.route("/create_game", methods=['GET','POST'])
