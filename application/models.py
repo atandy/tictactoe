@@ -14,9 +14,11 @@ class Game(db.Model):
     player_one = db.Column(db.Integer, db.ForeignKey('player.id'))
     player_two = db.Column(db.Integer, db.ForeignKey('player.id'))
     x_marker = db.Column(db.Text, nullable=False)
+    complete = db.Column(db.Boolean) # should be nullable=False
+    winner = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)
 
 class Board(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     game_uuid = db.Column(db.Text, db.ForeignKey('game.uuid'))
-    space = db.Column(db.String(1), unique=True, nullable=True)
+    space = db.Column(db.String(1), nullable=True)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)

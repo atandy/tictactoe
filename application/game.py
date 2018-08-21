@@ -37,8 +37,12 @@ class Game:
     def generate_uuid():
         return str(uuid.uuid4())
 
-    def create(self, player_one_id, player_two_id):
-        game = models.Game(uuid=self.uuid, player_one=player_one_id, player_two=player_two_id)
+    def create(self, player_one_id, player_two_id, x_marker):
+        game = models.Game(
+            uuid=self.uuid, 
+            player_one=player_one_id, 
+            player_two=player_two_id,
+            x_marker=x_marker)
         db.session.add(game)
         db.session.commit()
 
@@ -58,7 +62,7 @@ class Game:
         self.p2.create()
 
         # create the game in the backend
-        self.create(player_one_id, player_two_id)
+        self.create(player_one_id, player_two_id, x_marker)
 
         # when you start a new game, create a new board with all spaces unoccopied.
         self.board = Board()
@@ -66,6 +70,7 @@ class Game:
 
     def make_move(self, board_position, marker_type):
         self.board.occupy_space(board_position, marker_type)
+        self.game_status = self.board.check_permutations()
         return
 
     # reload game board given a game id 
@@ -90,6 +95,7 @@ class Game:
 
         self.players = [self.p1, self.p2]
         self.board = Board()
+
         db_board = db.session.query(models.Board).filter(models.Board.game_uuid==self.uuid).all()
         for board_row in db_board:
             for player in self.players:
@@ -98,15 +104,8 @@ class Game:
                     self.board.occupy_space(board_row.space, self.markers[player.id])
 
             current_status = self.board.check_permutations()
-            self.game_status = current_status 
-            '''
-                self.game_status = 'incomplete'
-            else:
-                self.game_status = 'complete'
-                self.winner = current_status
-            '''     
+            self.game_status = current_status
                         
-
 class Board:
     def __init__(self):
         self.id = None
