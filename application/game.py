@@ -15,9 +15,12 @@ logging.basicConfig(
 class Player:
     def __init__(self, player_id, marker_type):
         self.id = player_id
-        self.marker_type = marker_type
+        # marker only relevant on a per game basis.
+        # this is why it doesn't exist on the Player model.
+        self.marker_type = marker_type 
     
     def create(self):
+        '''Create a player if they don't already exist'''
         player = db.session.query(models.Player).filter(models.Player.id == self.id).first()
         if not player:
             player = models.Player(id=self.id)
@@ -38,6 +41,7 @@ class Game:
         return str(uuid.uuid4())
 
     def create(self, player_one_id, player_two_id, x_marker):
+        '''Create a new game'''
         game = models.Game(
             uuid=self.uuid, 
             player_one=player_one_id, 
@@ -46,9 +50,9 @@ class Game:
         db.session.add(game)
         db.session.commit()
 
-    # better ways to assign their player markers, this is redundant.
+    #TODO: better ways to assign their player markers.
     def start_new_game(self, player_one_id, player_two_id, x_marker):
-        # create new game between player one and player two
+        '''Create new game between player one and player two'''
         if x_marker == 'one':
             self.p1 = Player(player_one_id, 'X')
             self.p2 = Player(player_two_id, 'O')
@@ -57,7 +61,7 @@ class Game:
             self.p2 = Player(player_one_id, 'X')
 
         # create the players if they don't exist. 
-        #TODO: fix ?
+        # TODO: fix ?
         self.p1.create()
         self.p2.create()
 
@@ -70,15 +74,21 @@ class Game:
 
     def make_move(self, board_position, marker_type):
         self.board.occupy_space(board_position, marker_type)
+        # every time a move is made, check if there is a winner. 
         self.game_status = self.board.check_permutations()
         return
 
-    # reload game board given a game id 
     def update(self):
+        '''
+        This loads the board from the backend if an existing game_uuid is
+        passed in on the init of Game.
+        TODO: add relationships to the models and make this way easier.
+        '''
         game = db.session.query(models.Game).filter(models.Game.uuid == self.uuid).first()
         player_one = db.session.query(models.Player).filter(models.Player.id == game.player_one).first()
         player_two = db.session.query(models.Player).filter(models.Player.id == game.player_two).first()
 
+        #TODO: ew.
         if game.x_marker == 'one':
             self.markers = { 
                 player_one.id: 'X',
@@ -97,10 +107,12 @@ class Game:
         self.board = Board()
 
         db_board = db.session.query(models.Board).filter(models.Board.game_uuid==self.uuid).all()
+        
+        # populate all positions on the Game->Board 
         for board_row in db_board:
             for player in self.players:
                 if player.id == board_row.player_id:
-                    logging.info("occupying space: {}".format(board_row.space))
+                    logging.info("Occupying space: {}".format(board_row.space))
                     self.board.occupy_space(board_row.space, self.markers[player.id])
 
             current_status = self.board.check_permutations()
@@ -120,14 +132,14 @@ class Board:
         self.I = None
         return
     
-    #TODO: only create the board in the backend once a move has been made. 
+    '''
     def create():
         board = models.Board(game_uuid)
         db.session.add(board)
         db.session.commit()
-
+    '''
     def occupy_space(self, position, marker_type):
-        # googled this 
+        '''Set the board position attribute'''
         setattr(self, position, marker_type)
     
     def check_permutations(self):
@@ -144,22 +156,29 @@ class Board:
         ]
         def detect_winning_group(group):
             for position in group:
+                # if any positions are still none, then we can skip this group
                 if position is None:
                     return None
                 else:
                     continue
+            # if all three of the positions are populated and are 
+            # populated by the same character, then we have a winner. 
             if len(set(group)) <= 1:
                 return group[0]
 
+        # iterate through all of the possible winning groups and 
+        # detect if there are any winners.
         for wg in self.winning_groups:
             res = detect_winning_group(wg)
             if res == None:
                 continue
             else:
                 return res
+
+# Play the game locally (worked at least before I added bunch of server stuff.)
 '''
 g = Game()
-g.start_new_game(1, 2, 'one') #would need to just only support 'X', and 'O' on the front end
+g.start_new_game(1, 2, 'one') 
 g.make_move(g.p1, 'A')
 g.make_move(g.p2, 'B')
 g.make_move(g.p1, 'A')
@@ -169,5 +188,4 @@ g.make_move(g.p2, 'B')
 g.make_move(g.p1, 'I')
 g.make_move(g.p2, 'H')
 g.board.check_permutations()
-# returns 'The winner is: Y'
 '''

@@ -8,10 +8,11 @@ from application import db
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
 
-#db = SQLAlchemy(app)
 
-# assume that we are pulling the player ids by first having them log in. 
-
+# HTTP Request Assumptions:
+    # Client is POSTing.
+    # Client will have player ids and other info to send to backend
+    # Client will know the game_uuid (probably stored in session or on page)
 
 #curl -X POST "http://127.0.0.1:5000/create_game?p1id=1&p2id=2&x_marker=one"
 @app.route("/create_game", methods=['GET','POST'])
@@ -22,8 +23,7 @@ def create_game():
         x_marker = request.args.get('x_marker')
         g = game.Game()
         g.start_new_game(player_one_id, player_two_id, x_marker)
-
-        return "Created new game with uuid: {}".format(g.uuid)
+        return "\n Created new game with uuid: {} \n".format(g.uuid)
 
 
 #curl -X POST "http://127.0.0.1:5000/move?game_uuid=0ee0c8ab-19d9-4cb0-acbe-ad48b3a85fd7&player_id=1&space=A"
