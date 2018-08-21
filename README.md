@@ -31,8 +31,9 @@ export SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://username_here:@localhost/da
   * `curl -X POST "http://127.0.0.1:5000/move?game_uuid=0ee0c8ab-19d9-4cb0-acbe-ad48b3a85fd7&player_id=1&space=A"`
   * game_uuid : determined when a new game is created.
   * player_id : the ID of the player making the move.
-  * space : the board space the player moved in. options are A-I
-* Board looks like this
+  * space : the board space the player moved in. options are A through I
+* An example Board looks like this
+
 ![alt text](https://raw.githubusercontent.com/atandy/tictactoe/master/board_spaces.png)
 
 
